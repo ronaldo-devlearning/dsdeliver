@@ -1,5 +1,6 @@
 package com.devlearning.dsdeliver.services;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -8,8 +9,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.devlearning.dsdeliver.dto.OrderDTO;
+import com.devlearning.dsdeliver.dto.ProductDTO;
 import com.devlearning.dsdeliver.entities.Order;
+import com.devlearning.dsdeliver.entities.Product;
+import com.devlearning.dsdeliver.entities.enums.OrderStatus;
 import com.devlearning.dsdeliver.repositories.OrderRepository;
+import com.devlearning.dsdeliver.repositories.ProductRepository;
 
 @Service
 public class OrderService {
@@ -17,10 +22,25 @@ public class OrderService {
 	@Autowired
 	private OrderRepository repository;
 	
+	@Autowired
+	private ProductRepository productRepository;
+	
 	@Transactional(readOnly = true)
 	public List<OrderDTO> findAll() {
 		List<Order> list = repository.findOrdersWithProcucts();
 		
 		return list.stream().map(x -> new OrderDTO(x)).collect(Collectors.toList());
+	}
+	
+	@Transactional
+	public OrderDTO insert(OrderDTO dto) {
+		Order order = new Order(null, dto.getAddress(), dto.getLatitude(), dto.getLongitude(), 
+				Instant.now(), OrderStatus.PENDING);
+		for(ProductDTO p : dto.getProducts()) {
+			Product product = productRepository.getReferenceById(p.getId());
+			order.getProducts().add(product);
+		}
+		order = repository.save(order);
+		return new OrderDTO(order);
 	}
 }
